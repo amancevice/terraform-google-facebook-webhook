@@ -1,4 +1,14 @@
 const config = require('./config.json');
+const service = require('./client_secret.json');
+const { google } = require('googleapis');
+const pubsub = google.pubsub({
+    version: 'v1',
+    auth: new google.auth.JWT(
+      service.client_email,
+      './client_secret.json',
+      null,
+      ['https://www.googleapis.com/auth/pubsub'])
+  });
 
 /**
  * Log event info.
@@ -24,6 +34,34 @@ function verifyToken(req) {
     throw error;
   }
   return req;
+}
+
+/**
+ * Publish event to PubSub topic (if it's not a retry).
+ *
+ * @param {object} req Cloud Function request context.
+ */
+function publishEvent(req) {
+  // Publish event to PubSub unless it is a `subscribe` event
+  if (req.query['hub.mode'] !== 'subscribe') {
+    return pubsub.projects.topics.publish({
+        topic: `projects/${config.google.project}/topics/${config.google.topic}`,
+        resource: {
+          messages: [
+            {
+              data: Buffer.from(JSON.stringify(req.body)).toString('base64')
+            }
+          ]
+        }
+      })
+      .then((pub) => {
+        console.log(`PUB/SUB ${JSON.stringify(pub.data)}`);
+        return req;
+      });
+  }
+
+  // Resolve request without publishing
+  return Promise.resolve(req);
 }
 
 /**

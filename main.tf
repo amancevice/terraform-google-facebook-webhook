@@ -14,6 +14,8 @@ data "template_file" "config" {
   template = "${file("${path.module}/src/config.tpl")}"
 
   vars {
+    project            = "${var.project}"
+    pubsub_topic       = "${var.pubsub_topic}"
     verification_token = "${var.verification_token}"
   }
 }
@@ -29,6 +31,11 @@ data "template_file" "package" {
 data "archive_file" "archive" {
   type        = "zip"
   output_path = "${path.module}/dist/${var.function_name}-${local.version}.zip"
+
+  source {
+    content  = "${var.client_secret}"
+    filename = "client_secret.json"
+  }
 
   source {
     content  = "${data.template_file.config.rendered}"
@@ -62,4 +69,8 @@ resource "google_cloudfunctions_function" "function" {
   source_archive_object = "${google_storage_bucket_object.archive.name}"
   timeout               = "${var.timeout}"
   trigger_http          = true
+}
+
+resource "google_pubsub_topic" "topic" {
+  name  = "${var.pubsub_topic}"
 }
