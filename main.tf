@@ -7,14 +7,17 @@ provider "template" {
 }
 
 locals {
-  version = "0.0.1"
+  version = "0.1.0"
+}
+
+data "google_client_config" "cloud" {
 }
 
 data "template_file" "config" {
   template = "${file("${path.module}/src/config.tpl")}"
 
   vars {
-    project            = "${var.project}"
+    project            = "${coalesce("${var.project}", "${data.google_client_config.cloud.project}")}"
     pubsub_topic       = "${var.pubsub_topic}"
     verification_token = "${var.verification_token}"
   }

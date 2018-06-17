@@ -17,8 +17,25 @@ const pubsub = google.pubsub({
  */
 function logEvent(req) {
   console.log(`HEADERS ${JSON.stringify(req.headers)}`);
-  console.log(`EVENT ${JSON.stringify(req.body.event)}`);
+  console.log(`EVENT ${JSON.stringify(req.body)}`);
   return req;
+}
+
+/**
+ * Handle event.
+ *
+ * @param {object} req Cloud Function request context.
+ */
+function handleEvent(req) {
+  // Verify token and respond with challenge
+  if (req.query && req.query['hub.mode'] === 'subscribe') {
+    return Promise.resolve(req).then(verifyToken);
+  }
+
+  // Publish event
+  else {
+    return Promise.resolve(req).then(publishEvent);
+  }
 }
 
 /**
@@ -45,7 +62,7 @@ function publishEvent(req) {
   // Publish event to PubSub unless it is a `subscribe` event
   if (req.query['hub.mode'] !== 'subscribe') {
     return pubsub.projects.topics.publish({
-        topic: `projects/${config.google.project}/topics/${config.google.topic}`,
+        topic: `projects/${config.google.project}/topics/${config.google.pubsub_topic}`,
         resource: {
           messages: [
             {
@@ -78,7 +95,6 @@ function sendResponse(req, res) {
     console.log('OK');
     res.send();
   }
-  return req;
 }
 
 /**
@@ -102,7 +118,7 @@ function sendError(err, res) {
 exports.webhook = (req, res) => {
   Promise.resolve(req)
     .then(logEvent)
-    .then(verifyToken)
+    .then(handleEvent)
     .then((req) => sendResponse(req, res))
     .catch((err) => sendError(err, res));
 }

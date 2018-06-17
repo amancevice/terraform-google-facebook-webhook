@@ -9,6 +9,7 @@ variable "client_secret" {
 
 variable "project" {
   description = "The ID of the project to apply any resources to."
+  default     = ""
 }
 
 variable "pubsub_topic" {
