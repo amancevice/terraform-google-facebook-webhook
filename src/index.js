@@ -1,14 +1,6 @@
 const config = require('./config.json');
-const service = require('./client_secret.json');
-const { google } = require('googleapis');
-const pubsub = google.pubsub({
-    version: 'v1',
-    auth: new google.auth.JWT(
-      service.client_email,
-      './client_secret.json',
-      null,
-      ['https://www.googleapis.com/auth/pubsub'])
-  });
+const PubSub = require('@google-cloud/pubsub');
+const pubsub = new PubSub({projectId: config.google.project});
 
 /**
  * Log event info.
@@ -61,18 +53,11 @@ function verifyToken(req) {
 function publishEvent(req) {
   // Publish event to PubSub unless it is a `subscribe` event
   if (req.query['hub.mode'] !== 'subscribe') {
-    return pubsub.projects.topics.publish({
-        topic: `projects/${config.google.project}/topics/${config.google.pubsub_topic}`,
-        resource: {
-          messages: [
-            {
-              data: Buffer.from(JSON.stringify(req.body)).toString('base64')
-            }
-          ]
-        }
-      })
+    return pubsub.topic(config.google.pubsub_topic)
+      .publisher()
+      .publish(Buffer.from(JSON.stringify(req.body)))
       .then((pub) => {
-        console.log(`PUB/SUB ${JSON.stringify(pub.data)}`);
+        console.log(`PUB/SUB ${pub}`);
         return req;
       });
   }

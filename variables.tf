@@ -43,7 +43,7 @@ variable "labels" {
 
 variable "memory" {
   description = "Memory for Cloud Function."
-  default     = 512
+  default     = 256
 }
 
 variable "timeout" {
